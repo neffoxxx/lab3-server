@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { HumiditySensor } from './entities/humidity-sensor.entity';
 import { CreateHumiditySensorDto } from './dto/create-humidity-sensor.dto';
 import { UpdateHumiditySensorDto } from './dto/update-humidity-sensor.dto';
@@ -10,6 +11,7 @@ export class HumiditySensorsService {
   constructor(
     @InjectRepository(HumiditySensor)
     private readonly sensorsRepository: Repository<HumiditySensor>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async create(createSensorDto: CreateHumiditySensorDto): Promise<HumiditySensor> {
@@ -17,7 +19,9 @@ export class HumiditySensorsService {
       ...createSensorDto,
       timestamp: new Date(),
     });
-    return this.sensorsRepository.save(sensor);
+    const savedSensor = await this.sensorsRepository.save(sensor);
+    this.eventEmitter.emit('humidity.created', savedSensor);
+    return savedSensor;
   }
 
   async findAll(): Promise<HumiditySensor[]> {
